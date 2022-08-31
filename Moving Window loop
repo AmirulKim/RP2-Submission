@@ -1,0 +1,47 @@
+X_e <- read_csv(infile("X_amirul.csv"), col_names = FALSE, n_max = width, col_types = cols())
+obs_e <- read_csv(infile("obs_amirul.csv"), col_types = cols())
+obs_e <- obs_e[(skip+1):(skip+width),]
+obs_e_sort <- obs_e[order(obs_e$monocle_pseudotime),]
+var_e <- read_csv(infile("var_amirul.csv"), col_types = cols())
+colnames(X_e) <- var_e$Gene
+rownames(X_e) <- obs_e$CellID
+
+X_e_o <- X_e[order(match(rownames(X_e), obs_e_sort$CellID)), , drop = FALSE]
+
+entropy.velo <- data.frame(matrix(NA, nrow = 1000, ncol = 1))
+pseudo.mean <- data.frame(matrix(NA, nrow = 1, ncol = 1))
+
+for (p in 1:2276) {
+  pseudo_mean <- mean(obs_e_sort$monocle_pseudotime[(0+p):(9+p)])
+  X_e_s <- X_e_o[(0+p):(9+p),]
+  std_deviations <- apply(X_e_s, 2, sd)
+  X_e_s <- X_e_s[,std_deviations != 0.0000000000]
+  correlation_matrix <- cor(X_e_s)
+  correlation_matrix.gwas.velo <- correlation_matrix[, !(colnames(correlation_matrix) %in% gene.veloC)] 
+  correlation_matrix.gwas.velo <- correlation_matrix[rownames(correlation_matrix) %in% gene.veloC, ] 
+  binarised_matrix <- abs(correlation_matrix.gwas.velo)
+  binarised_matrix[which(binarised_matrix > sd(correlation_matrix.gwas.velo))] <- 1
+  binarised_matrix[which(binarised_matrix != 1)] <- 0
+  entropy_distribution_velo <- sapply(c(1:1000), subsample_entropy)
+  entropy.velo <- cbind(entropy.velo, entropy_distribution_velo)
+  pseudo.mean <- cbind(pseudo.mean,pseudo_mean)
+}
+
+entropy.all <- data.frame(matrix(NA, nrow = 1000, ncol = 1))
+pseudo.mean.all <- data.frame(matrix(NA, nrow = 1, ncol = 1))
+
+for (p in 1:2276) {
+  pseudo_mean <- mean(obs_e_sort$monocle_pseudotime[(0+p):(9+p)])
+  X_e_s <- X_e_o[(0+p):(9+p),]
+  std_deviations <- apply(X_e_s, 2, sd)
+  X_e_s <- X_e_s[,std_deviations != 0.0000000000]
+  correlation_matrix <- cor(X_e_s)
+  correlation_matrix.gwas.all <- correlation_matrix[, !(colnames(correlation_matrix) %in% gene.allC)] 
+  correlation_matrix.gwas.all <- correlation_matrix[rownames(correlation_matrix) %in% gene.allC, ] 
+  binarised_matrix <- abs(correlation_matrix.gwas.all)
+  binarised_matrix[which(binarised_matrix > sd(correlation_matrix.gwas.all))] <- 1
+  binarised_matrix[which(binarised_matrix != 1)] <- 0
+  entropy_distribution_all <- sapply(c(1:1000), subsample_entropy)
+  entropy.all <- cbind(entropy.all, entropy_distribution_all)
+  pseudo.mean.all <- cbind(pseudo.mean.all,pseudo_mean)
+}
